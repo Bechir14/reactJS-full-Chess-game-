@@ -13,157 +13,11 @@ import {
   Grid,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import Pawn from "./pieces/pawn";
-import Rook from "./pieces/rook";
-import Knight from "./pieces/knigth";
-import Bishop from "./pieces/bishop";
-import Queen from "./pieces/queen";
-import King from "./pieces/king";
-const ROWS = 8;
-const COLS = 8;
 
-const matrix = Array.from({ length: ROWS }, () =>
-  Array.from({ length: COLS }, () => null)
-);
+import initializeMatrix from "./init_Matrix";
+import isCheckMate from "./checkMate";
 
-const initializeMatrix = () => {
-  // white pawns
-  for (let i = 0; i < matrix[1].length; i++) {
-    matrix[1][i] = new Pawn(`wp${i + 1}`, { row: 1, col: i });
-  }
-
-  // black pawns
-  for (let i = 0; i < matrix[6].length; i++) {
-    matrix[6][i] = new Pawn(`bp${i + 1}`, { row: 6, col: i });
-  }
-
-  // white pieces
-  matrix[0][0] = new Rook("wr1", { row: 0, col: 0 });
-  matrix[0][1] = new Knight("wn1", { row: 0, col: 1 });
-  matrix[0][2] = new Bishop("wb1", { row: 0, col: 2 });
-  matrix[0][3] = new Queen("wq", { row: 0, col: 3 });
-  matrix[0][4] = new King("wk", { row: 0, col: 4 });
-  matrix[0][5] = new Bishop("wb2", { row: 0, col: 5 });
-  matrix[0][6] = new Knight("wn2", { row: 0, col: 6 });
-  matrix[0][7] = new Rook("wr2", { row: 0, col: 7 });
-
-  matrix[7][0] = new Rook("br1", { row: 7, col: 0 });
-  matrix[7][1] = new Knight("bn1", { row: 7, col: 1 });
-  matrix[7][2] = new Bishop("bb1", { row: 7, col: 2 });
-  matrix[7][3] = new Queen("bq", { row: 7, col: 3 });
-  matrix[7][4] = new King("bk", { row: 7, col: 4 });
-  matrix[7][5] = new Bishop("bb2", { row: 7, col: 5 });
-  matrix[7][6] = new Knight("bn2", { row: 7, col: 6 });
-  matrix[7][7] = new Rook("br2", { row: 7, col: 7 });
-};
-
-initializeMatrix();
-const isCheckMate = (matrix, king) => {
-  const currentPosition = king.currentPosition;
-  const { row, col } = currentPosition;
-  let threatCanBeCaptured = false;
-  let threatCanBeIntercepted = false;
-  const allies = [];
-
-  const allEnemyMoves = king.getAllPiecesPossibleMoves(matrix);
-  const isInCheck = allEnemyMoves.some(
-    (move) => move.row === row && move.col === col
-  );
-
-  if (!isInCheck) return false;
-
-  const kingMoves = king.computePossibleMoves(currentPosition, matrix);
-  if (kingMoves.length > 0) return false;
-
-  const threats = [];
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const piece = matrix[r][c];
-      if (piece && piece.name[0] !== king.name[0] && !(piece instanceof King)) {
-        const moves = piece.computePossibleMoves({ row: r, col: c }, matrix);
-        const isThreat = moves.some((m) => m.row === row && m.col === col);
-        if (isThreat) {
-          // console.log({ piece, from: { row: r, col: c } });
-          threats.push({ piece, from: { row: r, col: c } });
-        }
-      }
-    }
-  }
-
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const ally = matrix[r][c];
-      if (ally && ally.name[0] === king.name[0]) {
-        allies.push(ally);
-        const moves = ally.computePossibleMoves({ row: r, col: c }, matrix);
-        for (const move of moves) {
-          if (
-            threats.some(
-              (threat) =>
-                threat.from.row === move.row && threat.from.col === move.col
-            )
-          ) {
-            threatCanBeCaptured = true;
-          }
-        }
-      }
-    }
-  }
-  const threatsPathsLeadingToKing = [];
-  for (const threat of threats) {
-    if (!(threat.piece instanceof Pawn) && !(threat.piece instanceof Knight)) {
-      const threatPaths = threat.piece.possiblePaths;
-      for (let i = 0; i < threatPaths.length; i++) {
-        const path = threatPaths[i];
-        if (
-          path[path.length - 1].row === currentPosition.row &&
-          path[path.length - 1].col === currentPosition.col
-        ) {
-          threatsPathsLeadingToKing.push(path);
-        }
-      }
-    }
-  }
-  //bechir houwe kbar star v javascript
-  //threat can be intercepted
-  for (const path of threatsPathsLeadingToKing) {
-    for (const ally of allies) {
-      const allyPossibleMoves = ally.computePossibleMoves(
-        ally.currentPosition,
-        matrix
-      );
-      for (const move of path) {
-        if (
-          allyPossibleMoves.some(
-            ({ row, col }) => row === move.row && col === move.col
-          )
-        )
-          threatCanBeIntercepted = true;
-      }
-    }
-  }
-  let copyMatrix = matrix.map((row) =>
-    row.map((cell) =>
-      cell
-        ? Object.assign(Object.create(Object.getPrototypeOf(cell)), cell)
-        : null
-    )
-  );
-  console.log(threatCanBeCaptured, threatCanBeIntercepted);
-
-  for (const threat of threats) {
-    copyMatrix[threat.piece.position.row][threat.piece.position.col] = null;
-    if (
-      copyMatrix[currentPosition.row][currentPosition.col].computePossibleMoves(
-        currentPosition,
-        copyMatrix
-      ).length === 0
-    ) {
-    }
-  }
-
-  return !(threatCanBeCaptured || threatCanBeIntercepted);
-};
+let matrix = initializeMatrix();
 
 const Board = () => {
   const [readyToMove, setReadyToMove] = useState(false);
@@ -177,8 +31,8 @@ const Board = () => {
 
   const findKing = (color) => {
     const kingId = color === "white" ? "wk" : "bk";
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
         if (matrix[row][col] && matrix[row][col].name === kingId) {
           return matrix[row][col];
         }
@@ -207,13 +61,13 @@ const Board = () => {
   };
 
   const resetGame = () => {
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
         matrix[row][col] = null;
       }
     }
 
-    initializeMatrix();
+    matrix = initializeMatrix();
     setBoard([...matrix]);
     setPlayerToPlay("white");
     setReadyToMove(false);
@@ -300,11 +154,11 @@ const Board = () => {
       checkIsPossibleMove(rowIndex, colIndex) && readyToMove;
 
     if (isSelected) {
-      return isLight ? "#FFE5B4" : "#DEB887";
+      return isLight ? "#4A4A4A" : "#2E2E2E";
     } else if (isPossibleMove) {
-      return isLight ? "#E8F5E8" : "#C8E6C9";
+      return isLight ? "#1B4332" : "#081C15";
     } else {
-      return isLight ? "#FAEBD7" : "#8B7355";
+      return isLight ? "#3C3C3C" : "#1E1E1E";
     }
   };
 
@@ -314,11 +168,11 @@ const Board = () => {
       checkIsPossibleMove(rowIndex, colIndex) && readyToMove;
 
     if (isSelected) {
-      return "3px solid #FF8C00";
+      return "3px solid #FFD700";
     } else if (isPossibleMove) {
-      return "2px solid #4CAF50";
+      return "2px solid #40C057";
     } else {
-      return "1px solid #8B7355";
+      return "1px solid #404040";
     }
   };
 
@@ -326,20 +180,16 @@ const Board = () => {
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
 
   return (
-    <Container maxWidth="xl" sx={{ minHeight: "100vh", p: 2 }}>
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 2,
-          minHeight: "100vh",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          backgroundAttachment: "fixed",
-          borderRadius: 2,
-          p: 2,
-        }}
-      >
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg, #1a1a1a 0%, #0d1421 50%, #1a1a1a 100%)",
+        color: "#ffffff",
+        p: { xs: 1, sm: 2, md: 3 },
+      }}
+    >
+      <Container maxWidth="xl">
         <Dialog
           open={gameOver}
           maxWidth="sm"
@@ -347,21 +197,20 @@ const Board = () => {
           PaperProps={{
             sx: {
               borderRadius: 4,
-              background: "linear-gradient(145deg, #ffffff, #f5f5f5)",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+              background: "linear-gradient(145deg, #2c2c2c, #1e1e1e)",
+              border: "1px solid #404040",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
             },
           }}
         >
           <DialogTitle
             sx={{
               textAlign: "center",
-              background: "linear-gradient(45deg, #2c3e50, #34495e)",
-              backgroundClip: "text",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
+              color: "#ffffff",
               fontWeight: "800",
-              fontSize: "28px",
+              fontSize: { xs: "20px", sm: "28px" },
               py: 3,
+              borderBottom: "1px solid #404040",
             }}
           >
             🏆 GAME OVER! 🏆
@@ -372,9 +221,10 @@ const Board = () => {
               sx={{
                 mb: 2,
                 fontWeight: "bold",
-                color: winner === "white" ? "#2196F3" : "#424242",
+                color: winner === "white" ? "#FFD700" : "#C0C0C0",
                 textTransform: "uppercase",
                 letterSpacing: "2px",
+                fontSize: { xs: "1.5rem", sm: "2rem" },
               }}
             >
               {winner === "white" ? "♔ WHITE WINS! ♔" : "♛ BLACK WINS! ♛"}
@@ -382,9 +232,10 @@ const Board = () => {
             <Typography
               variant="h6"
               sx={{
-                color: "#666",
+                color: "#b0b0b0",
                 fontStyle: "italic",
                 mb: 3,
+                fontSize: { xs: "1rem", sm: "1.25rem" },
               }}
             >
               Checkmate! 🎯
@@ -392,7 +243,7 @@ const Board = () => {
             <Typography
               variant="body1"
               sx={{
-                color: "#888",
+                color: "#909090",
                 mb: 2,
               }}
             >
@@ -408,14 +259,15 @@ const Board = () => {
                 px: 4,
                 py: 1.5,
                 borderRadius: 25,
-                background: "linear-gradient(45deg, #2196F3, #1976d2)",
+                background: "linear-gradient(45deg, #333333, #555555)",
                 fontSize: "18px",
                 fontWeight: "bold",
                 textTransform: "none",
-                boxShadow: "0 8px 25px rgba(33, 150, 243, 0.4)",
+                border: "1px solid #666666",
+                boxShadow: "0 8px 25px rgba(0,0,0,0.4)",
                 "&:hover": {
-                  background: "linear-gradient(45deg, #1976d2, #1565c0)",
-                  boxShadow: "0 12px 35px rgba(33, 150, 243, 0.6)",
+                  background: "linear-gradient(45deg, #555555, #777777)",
+                  boxShadow: "0 12px 35px rgba(0,0,0,0.6)",
                 },
               }}
             >
@@ -424,313 +276,357 @@ const Board = () => {
           </DialogActions>
         </Dialog>
 
-        {/* Header */}
-        <Paper
-          elevation={6}
-          sx={{
-            p: 2,
-            borderRadius: 3,
-            background: "linear-gradient(145deg, #ffffff, #f5f5f5)",
-            width: "100%",
-            maxWidth: "600px",
-            textAlign: "center",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-          }}
-        >
-          <Typography
-            variant="h4"
-            component="h1"
-            gutterBottom
+        <Stack spacing={{ xs: 2, sm: 3, md: 4 }} alignItems="center">
+          <Paper
+            elevation={8}
             sx={{
-              background: "linear-gradient(45deg, #2c3e50, #34495e)",
-              backgroundClip: "text",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              fontWeight: "800",
-              letterSpacing: "1px",
-              mb: 1,
+              p: { xs: 2, sm: 3 },
+              borderRadius: 3,
+              background: "linear-gradient(145deg, #2c2c2c, #1e1e1e)",
+              border: "1px solid #404040",
+              width: "100%",
+              maxWidth: "800px",
+              textAlign: "center",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
             }}
           >
-            ♔ BECHIR'S CHESS ♛
-          </Typography>
-          <Chip
-            label={
-              gameOver
-                ? `Game Over - ${
-                    winner?.charAt(0).toUpperCase() + winner?.slice(1)
-                  } Wins!`
-                : `${
-                    playerToPlay.charAt(0).toUpperCase() + playerToPlay.slice(1)
-                  }'s Turn`
-            }
-            color={
-              gameOver
-                ? "error"
-                : playerToPlay === "white"
-                ? "default"
-                : "primary"
-            }
-            variant="filled"
-            sx={{
-              fontSize: "16px",
-              fontWeight: "bold",
-              px: 2,
-              py: 1,
-              borderRadius: 15,
-              background: gameOver
-                ? "linear-gradient(45deg, #f44336, #d32f2f)"
-                : playerToPlay === "white"
-                ? "linear-gradient(45deg, #f5f5f5, #e0e0e0)"
-                : "linear-gradient(45deg, #1976d2, #1565c0)",
-              color: gameOver
-                ? "white"
-                : playerToPlay === "white"
-                ? "#333"
-                : "white",
-              boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
-            }}
-          />
-        </Paper>
+            <Typography
+              variant="h3"
+              component="h1"
+              gutterBottom
+              sx={{
+                color: "#ffffff",
+                fontWeight: "800",
+                letterSpacing: "1px",
+                mb: 2,
+                fontSize: { xs: "1.8rem", sm: "2.5rem", md: "3rem" },
+              }}
+            >
+              ♔ BECHIR'S CHESS ♛
+            </Typography>
+            <Chip
+              label={
+                gameOver
+                  ? `Game Over - ${
+                      winner?.charAt(0).toUpperCase() + winner?.slice(1)
+                    } Wins!`
+                  : `${
+                      playerToPlay.charAt(0).toUpperCase() +
+                      playerToPlay.slice(1)
+                    }'s Turn`
+              }
+              variant="filled"
+              sx={{
+                fontSize: { xs: "14px", sm: "16px" },
+                fontWeight: "bold",
+                px: 3,
+                py: 1,
+                borderRadius: 15,
+                background: gameOver
+                  ? "linear-gradient(45deg, #d32f2f, #b71c1c)"
+                  : playerToPlay === "white"
+                  ? "linear-gradient(45deg, #FFD700, #FFA000)"
+                  : "linear-gradient(45deg, #616161, #424242)",
+                color: gameOver
+                  ? "#ffffff"
+                  : playerToPlay === "white"
+                  ? "#000000"
+                  : "#ffffff",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
+                border: "1px solid #666666",
+              }}
+            />
+          </Paper>
 
-        {/* Main Game Area */}
-        <Grid
-          container
-          spacing={2}
-          justifyContent="center"
-          alignItems="flex-start"
-        >
-          {/* Chess Board */}
-          <Grid item xs={12} md={8} lg={6}>
-            <Box sx={{ position: "relative", opacity: gameOver ? 0.7 : 1 }}>
-              {/* Rank Numbers (Left Side) */}
+          <Grid
+            container
+            spacing={{ xs: 2, sm: 3, md: 4 }}
+            justifyContent="center"
+          >
+            <Grid item xs={12} lg={8} xl={6}>
               <Box
                 sx={{
-                  position: "absolute",
-                  left: -20,
-                  top: 8,
-                  height: "calc(100% - 16px)",
+                  position: "relative",
+                  opacity: gameOver ? 0.7 : 1,
                   display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  zIndex: 10,
-                }}
-              >
-                {ranks.map((rank) => (
-                  <Typography
-                    key={rank}
-                    sx={{
-                      color: "white",
-                      fontWeight: "bold",
-                      fontSize: "12px",
-                      textShadow: "1px 1px 2px rgba(0,0,0,0.7)",
-                      lineHeight: 1,
-                      height: "calc(100% / 8)",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    {rank}
-                  </Typography>
-                ))}
-              </Box>
-
-              {/* File Letters (Bottom) */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  bottom: -20,
-                  left: 8,
-                  width: "calc(100% - 16px)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  zIndex: 10,
-                }}
-              >
-                {files.map((file) => (
-                  <Typography
-                    key={file}
-                    sx={{
-                      color: "white",
-                      fontWeight: "bold",
-                      fontSize: "12px",
-                      textShadow: "1px 1px 2px rgba(0,0,0,0.7)",
-                      width: "calc(100% / 8)",
-                      textAlign: "center",
-                    }}
-                  >
-                    {file}
-                  </Typography>
-                ))}
-              </Box>
-
-              <Paper
-                elevation={12}
-                sx={{
-                  p: 1,
-                  borderRadius: 2,
-                  background: "linear-gradient(145deg, #8B4513, #A0522D)",
-                  boxShadow: "0 15px 30px rgba(0,0,0,0.3)",
+                  justifyContent: "center",
                 }}
               >
                 <Box
                   sx={{
-                    border: "2px solid #654321",
-                    borderRadius: 1,
-                    overflow: "hidden",
-                    boxShadow: "inset 0 0 15px rgba(0,0,0,0.3)",
+                    position: "absolute",
+                    left: { xs: -16, sm: -20, md: -24 },
+                    top: 8,
+                    height: "calc(100% - 16px)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    zIndex: 10,
                   }}
                 >
-                  <Stack gap={0}>
-                    {board.map((row, rowIndex) => (
-                      <Stack direction="row" key={rowIndex} gap={0}>
-                        {row.map((piece, colIndex) => (
-                          <Box
-                            key={colIndex}
-                            onClick={() =>
-                              handleMove({
-                                piece: piece,
-                                position: { row: rowIndex, col: colIndex },
-                              })
-                            }
-                            sx={{
-                              width: { xs: "45px", sm: "55px", md: "60px" },
-                              height: { xs: "45px", sm: "55px", md: "60px" },
-                              backgroundColor: getSquareColor(
-                                rowIndex,
-                                colIndex
-                              ),
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              cursor: gameOver ? "not-allowed" : "pointer",
-                              border: getSquareBorder(rowIndex, colIndex),
-                              position: "relative",
-                              "&:hover": {
-                                filter: gameOver ? "none" : "brightness(1.1)",
-                              },
-                            }}
-                          >
-                            {checkIsPossibleMove(rowIndex, colIndex) &&
-                              readyToMove &&
-                              !piece && (
-                                <Box
-                                  sx={{
-                                    width: "16px",
-                                    height: "16px",
-                                    borderRadius: "50%",
-                                    backgroundColor: "#4CAF50",
-                                    opacity: 0.7,
-                                  }}
-                                />
-                              )}
-
-                            {checkIsPossibleMove(rowIndex, colIndex) &&
-                              readyToMove &&
-                              piece && (
-                                <Box
-                                  sx={{
-                                    position: "absolute",
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    border: "3px solid #FF5722",
-                                    borderRadius: "6px",
-                                    pointerEvents: "none",
-                                  }}
-                                />
-                              )}
-
-                            {piece && (
-                              <img
-                                src={piece.img}
-                                alt={piece.id}
-                                style={{
-                                  width: "85%",
-                                  height: "85%",
-                                  objectFit: "contain",
-                                  filter:
-                                    isPieceOwnedByCurrentPlayer(piece) &&
-                                    !readyToMove &&
-                                    !gameOver
-                                      ? "drop-shadow(0 0 6px rgba(255, 215, 0, 0.8))"
-                                      : "drop-shadow(0 2px 4px rgba(0,0,0,0.3))",
-                                }}
-                              />
-                            )}
-                          </Box>
-                        ))}
-                      </Stack>
-                    ))}
-                  </Stack>
-                </Box>
-              </Paper>
-            </Box>
-          </Grid>
-
-          {/* Move History */}
-          {moveHistory.length > 0 && (
-            <Grid item xs={12} md={4} lg={4}>
-              <Paper
-                elevation={6}
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  background: "linear-gradient(145deg, #ffffff, #f8f9fa)",
-                  maxHeight: "400px",
-                  overflow: "auto",
-                  boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  gutterBottom
-                  sx={{
-                    color: "#2c3e50",
-                    fontWeight: "bold",
-                    borderBottom: "2px solid #e0e0e0",
-                    pb: 1,
-                    mb: 2,
-                    fontSize: "18px",
-                  }}
-                >
-                  📜 Move History
-                </Typography>
-                <Stack gap={1}>
-                  {moveHistory.slice(-10).map((move, index) => (
-                    <Box
-                      key={index}
+                  {ranks.map((rank) => (
+                    <Typography
+                      key={rank}
                       sx={{
-                        p: 1,
-                        backgroundColor:
-                          index % 2 === 0 ? "#f8f9fa" : "#ffffff",
-                        borderRadius: 1,
-                        border: "1px solid #e9ecef",
+                        color: "#b0b0b0",
+                        fontWeight: "bold",
+                        fontSize: { xs: "10px", sm: "12px", md: "14px" },
+                        textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+                        lineHeight: 1,
+                        height: "calc(100% / 8)",
+                        display: "flex",
+                        alignItems: "center",
                       }}
                     >
-                      <Typography
-                        variant="body2"
+                      {rank}
+                    </Typography>
+                  ))}
+                </Box>
+
+                <Box
+                  sx={{
+                    position: "absolute",
+                    bottom: { xs: -16, sm: -20, md: -24 },
+                    left: 8,
+                    width: "calc(100% - 16px)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    zIndex: 10,
+                  }}
+                >
+                  {files.map((file) => (
+                    <Typography
+                      key={file}
+                      sx={{
+                        color: "#b0b0b0",
+                        fontWeight: "bold",
+                        fontSize: { xs: "10px", sm: "12px", md: "14px" },
+                        textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+                        width: "calc(100% / 8)",
+                        textAlign: "center",
+                      }}
+                    >
+                      {file}
+                    </Typography>
+                  ))}
+                </Box>
+
+                <Paper
+                  elevation={16}
+                  sx={{
+                    p: 1,
+                    borderRadius: 2,
+                    background: "linear-gradient(145deg, #1a1a1a, #2c2c2c)",
+                    border: "2px solid #404040",
+                    boxShadow: "0 15px 30px rgba(0,0,0,0.6)",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      border: "2px solid #333333",
+                      borderRadius: 1,
+                      overflow: "hidden",
+                      boxShadow: "inset 0 0 15px rgba(0,0,0,0.5)",
+                    }}
+                  >
+                    <Stack gap={0}>
+                      {board.map((row, rowIndex) => (
+                        <Stack direction="row" key={rowIndex} gap={0}>
+                          {row.map((piece, colIndex) => (
+                            <Box
+                              key={colIndex}
+                              onClick={() =>
+                                handleMove({
+                                  piece: piece,
+                                  position: { row: rowIndex, col: colIndex },
+                                })
+                              }
+                              sx={{
+                                width: {
+                                  xs: "40px",
+                                  sm: "50px",
+                                  md: "60px",
+                                  lg: "70px",
+                                },
+                                height: {
+                                  xs: "40px",
+                                  sm: "50px",
+                                  md: "60px",
+                                  lg: "70px",
+                                },
+                                backgroundColor: getSquareColor(
+                                  rowIndex,
+                                  colIndex
+                                ),
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: gameOver ? "not-allowed" : "pointer",
+                                border: getSquareBorder(rowIndex, colIndex),
+                                position: "relative",
+                                transition: "all 0.2s ease-in-out",
+                                "&:hover": {
+                                  filter: gameOver ? "none" : "brightness(1.2)",
+                                  transform: gameOver ? "none" : "scale(1.02)",
+                                },
+                              }}
+                            >
+                              {checkIsPossibleMove(rowIndex, colIndex) &&
+                                readyToMove &&
+                                !piece && (
+                                  <Box
+                                    sx={{
+                                      width: { xs: "12px", sm: "16px" },
+                                      height: { xs: "12px", sm: "16px" },
+                                      borderRadius: "50%",
+                                      backgroundColor: "#40C057",
+                                      opacity: 0.8,
+                                      boxShadow:
+                                        "0 0 8px rgba(64, 192, 87, 0.5)",
+                                    }}
+                                  />
+                                )}
+
+                              {checkIsPossibleMove(rowIndex, colIndex) &&
+                                readyToMove &&
+                                piece && (
+                                  <Box
+                                    sx={{
+                                      position: "absolute",
+                                      top: 2,
+                                      left: 2,
+                                      right: 2,
+                                      bottom: 2,
+                                      border: "3px solid #FF6B6B",
+                                      borderRadius: "8px",
+                                      pointerEvents: "none",
+                                      boxShadow:
+                                        "0 0 12px rgba(255, 107, 107, 0.5)",
+                                    }}
+                                  />
+                                )}
+
+                              {piece && (
+                                <img
+                                  src={piece.img}
+                                  alt={piece.id}
+                                  style={{
+                                    width: "85%",
+                                    height: "85%",
+                                    objectFit: "contain",
+                                    filter:
+                                      isPieceOwnedByCurrentPlayer(piece) &&
+                                      !readyToMove &&
+                                      !gameOver
+                                        ? "drop-shadow(0 0 8px rgba(255, 215, 0, 0.9)) brightness(1.1)"
+                                        : "drop-shadow(0 2px 4px rgba(0,0,0,0.6))",
+                                  }}
+                                />
+                              )}
+                            </Box>
+                          ))}
+                        </Stack>
+                      ))}
+                    </Stack>
+                  </Box>
+                </Paper>
+              </Box>
+            </Grid>
+
+            {moveHistory.length > 0 && (
+              <Grid item xs={12} lg={4} xl={4}>
+                <Paper
+                  elevation={8}
+                  sx={{
+                    p: { xs: 2, sm: 3 },
+                    borderRadius: 2,
+                    background: "linear-gradient(145deg, #2c2c2c, #1e1e1e)",
+                    border: "1px solid #404040",
+                    maxHeight: { xs: "300px", sm: "400px", md: "500px" },
+                    overflow: "auto",
+                    boxShadow: "0 8px 25px rgba(0,0,0,0.4)",
+                    "&::-webkit-scrollbar": {
+                      width: "8px",
+                    },
+                    "&::-webkit-scrollbar-track": {
+                      background: "#1a1a1a",
+                      borderRadius: "4px",
+                    },
+                    "&::-webkit-scrollbar-thumb": {
+                      background: "#404040",
+                      borderRadius: "4px",
+                      "&:hover": {
+                        background: "#555555",
+                      },
+                    },
+                  }}
+                >
+                  <Typography
+                    variant="h6"
+                    gutterBottom
+                    sx={{
+                      color: "#ffffff",
+                      fontWeight: "bold",
+                      borderBottom: "2px solid #404040",
+                      pb: 1,
+                      mb: 2,
+                      fontSize: { xs: "16px", sm: "18px" },
+                    }}
+                  >
+                    📜 Move History
+                  </Typography>
+                  <Stack gap={1}>
+                    {moveHistory.slice(-15).map((move, index) => (
+                      <Box
+                        key={index}
                         sx={{
-                          color: "#495057",
-                          fontSize: "12px",
-                          fontFamily: "Consolas, monospace",
-                          fontWeight: "500",
+                          p: { xs: 1, sm: 1.5 },
+                          backgroundColor:
+                            index % 2 === 0 ? "#2a2a2a" : "#333333",
+                          borderRadius: 1,
+                          border: "1px solid #404040",
+                          transition: "background-color 0.2s ease",
+                          "&:hover": {
+                            backgroundColor: "#3a3a3a",
+                          },
                         }}
                       >
-                        <strong>{moveHistory.length - 9 + index}.</strong>{" "}
-                        {move}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              </Paper>
-            </Grid>
-          )}
-        </Grid>
-      </Box>
-    </Container>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "#e0e0e0",
+                            fontSize: { xs: "11px", sm: "12px" },
+                            fontFamily: "'Courier New', monospace",
+                            fontWeight: "500",
+                          }}
+                        >
+                          <Box
+                            component="span"
+                            sx={{
+                              color: "#FFD700",
+                              fontWeight: "bold",
+                              mr: 1,
+                            }}
+                          >
+                            {moveHistory.length -
+                              (moveHistory.slice(-15).length - 1) +
+                              index}
+                            .
+                          </Box>
+                          {move}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Paper>
+              </Grid>
+            )}
+          </Grid>
+        </Stack>
+      </Container>
+    </Box>
   );
 };
 
