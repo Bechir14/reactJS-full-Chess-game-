@@ -13,17 +13,17 @@ const matrix = Array.from({ length: ROWS }, () =>
 );
 
 const initializeMatrix = () => {
-  // white pawns
+  //   white pawns
   for (let i = 0; i < matrix[1].length; i++) {
     matrix[1][i] = new Pawn(`wp${i + 1}`, { row: 1, col: i });
   }
 
-  // black pawns
+  //   black pawns
   for (let i = 0; i < matrix[6].length; i++) {
     matrix[6][i] = new Pawn(`bp${i + 1}`, { row: 6, col: i });
   }
 
-  // white pieces
+  //   white pieces
   matrix[0][0] = new Rook("wr1", { row: 0, col: 0 });
   matrix[0][1] = new Knight("wn1", { row: 0, col: 1 });
   matrix[0][2] = new Bishop("wb1", { row: 0, col: 2 });
@@ -32,7 +32,7 @@ const initializeMatrix = () => {
   matrix[0][5] = new Bishop("wb2", { row: 0, col: 5 });
   matrix[0][6] = new Knight("wn2", { row: 0, col: 6 });
   matrix[0][7] = new Rook("wr2", { row: 0, col: 7 });
-
+  //black peices
   matrix[7][0] = new Rook("br1", { row: 7, col: 0 });
   matrix[7][1] = new Knight("bn1", { row: 7, col: 1 });
   matrix[7][2] = new Bishop("bb1", { row: 7, col: 2 });

@@ -16,8 +16,11 @@ import { useEffect, useState } from "react";
 
 import initializeMatrix from "./init_Matrix";
 import isCheckMate from "./checkMate";
+import King from "./pieces/king";
 
 let matrix = initializeMatrix();
+const moveSound = new Audio("/move.mp3");
+const captureSound = new Audio("/capture.mp3");
 
 const Board = () => {
   const [readyToMove, setReadyToMove] = useState(false);
@@ -28,6 +31,7 @@ const Board = () => {
   const [moveHistory, setMoveHistory] = useState([]);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState(null);
+  const [isDraw, setIsDraw] = useState(false);
 
   const findKing = (color) => {
     const kingId = color === "white" ? "wk" : "bk";
@@ -47,7 +51,27 @@ const Board = () => {
 
     if (currentKing && isCheckMate(matrix, currentKing)) {
       setGameOver(true);
-      setWinner(playerToPlay === "white" ? "black" : "white");
+
+      // Check if only kings remain on the board (draw condition)
+      let pieceCount = 0;
+      let kingCount = 0;
+
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          if (matrix[row][col]) {
+            pieceCount++;
+            if (matrix[row][col] instanceof King) {
+              kingCount++;
+            }
+          }
+        }
+      }
+
+      if (pieceCount === 2 && kingCount === 2) {
+        setIsDraw(true);
+      } else {
+        setWinner(playerToPlay === "white" ? "black" : "white");
+      }
       return true;
     }
 
@@ -76,6 +100,7 @@ const Board = () => {
     setMoveHistory([]);
     setGameOver(false);
     setWinner(null);
+    setIsDraw(false);
   };
 
   const isPieceOwnedByCurrentPlayer = (piece) => {
@@ -96,6 +121,8 @@ const Board = () => {
       } else {
         const capturedPiece = matrix[row][col];
         pieceToBeMoved.Move(clicked.position, pieceToBeMoved.position, board);
+        if (capturedPiece) captureSound.play();
+        else moveSound.play();
 
         const moveNotation = `${pieceToBeMoved.name} ${String.fromCharCode(
           97 + pieceToBeMoved.position.col
@@ -113,7 +140,7 @@ const Board = () => {
 
         setTimeout(() => {
           checkForCheckmate();
-        }, 5000);
+        }, 8000);
       }
     } else {
       if (clicked.piece && isPieceOwnedByCurrentPlayer(clicked.piece)) {
@@ -227,7 +254,11 @@ const Board = () => {
                 fontSize: { xs: "1.5rem", sm: "2rem" },
               }}
             >
-              {winner === "white" ? "♔ WHITE WINS! ♔" : "♛ BLACK WINS! ♛"}
+              {isDraw
+                ? "Draw"
+                : winner === "white"
+                ? "♔ WHITE WINS! ♔"
+                : "♛ BLACK WINS! ♛"}
             </Typography>
             <Typography
               variant="h6"
@@ -238,7 +269,7 @@ const Board = () => {
                 fontSize: { xs: "1rem", sm: "1.25rem" },
               }}
             >
-              Checkmate! 🎯
+              {winner ? "Checkmate! 🎯" : "it's a draw"}
             </Typography>
             <Typography
               variant="body1"
